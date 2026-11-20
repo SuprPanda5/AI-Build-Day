@@ -1,0 +1,905 @@
+/<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>School Task Scheduler</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17324d;
+      --muted: #64748b;
+      --paper: #f7f4ed;
+      --panel: #fffdf8;
+      --accent: #d7663d;
+      --accent-dark: #a84428;
+      --line: #dfd8ca;
+      --shadow: 0 18px 50px rgba(44, 57, 72, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: linear-gradient(135deg, #f7f4ed 0%, #e8f0ed 100%);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 64px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent-dark);
+      font: 700 0.75rem/1.2 Arial, sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 680px;
+      margin: 0;
+      font-size: clamp(2.5rem, 7vw, 5.5rem);
+      line-height: 0.94;
+      letter-spacing: -0.04em;
+    }
+
+    .intro {
+      max-width: 600px;
+      margin: 20px 0 36px;
+      color: var(--muted);
+      font-size: 1.15rem;
+      line-height: 1.55;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 24px;
+      border: 1px solid rgba(223, 216, 202, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.88);
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 20px;
+      font-size: 1.55rem;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 7px;
+      font: 700 0.8rem/1.2 Arial, sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    input, textarea, select, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font: inherit;
+    }
+
+    input, textarea, select {
+      padding: 12px 13px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: 3px solid rgba(215, 102, 61, 0.2);
+      border-color: var(--accent);
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 13px 16px;
+      border-color: var(--accent-dark);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font: 700 0.95rem/1.2 Arial, sans-serif;
+    }
+
+    button:hover { background: var(--accent-dark); }
+
+    .empty-state {
+      min-height: 340px;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      border: 1px dashed #bdb5a7;
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state[hidden] { display: none; }
+
+    .empty-state p { max-width: 300px; line-height: 1.5; }
+
+    .task-list {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fff;
+    }
+
+    .task-details {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .task-details span {
+      color: var(--muted);
+      font: 0.85rem/1.2 Arial, sans-serif;
+    }
+
+    .task-item.completed strong {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .task-item.overdue {
+      border-color: var(--accent);
+      background: #fff5ef;
+    }
+
+    .overdue-label {
+      color: var(--accent-dark) !important;
+      font-weight: 700;
+    }
+
+    .task-actions {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 8px;
+    }
+
+    .task-actions button {
+      min-width: 0;
+      width: auto;
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+    }
+
+    .secondary-button {
+      border-color: var(--line) !important;
+      background: var(--panel) !important;
+      color: var(--ink) !important;
+    }
+
+    .secondary-button:hover { background: #f0ece3 !important; }
+
+    .cancel-button[hidden] { display: none; }
+
+    .calendar-panel {
+      margin-top: 24px;
+    }
+
+    .calendar-header,
+    .calendar-navigation {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .calendar-header { flex-wrap: wrap; }
+
+    .view-controls {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--paper);
+    }
+
+    .view-button,
+    .calendar-navigation button,
+    .blocked-period-item button {
+      width: auto;
+      margin: 0;
+      padding: 9px 12px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--ink);
+      font-size: 0.8rem;
+    }
+
+    .view-button[aria-pressed="true"] {
+      border-color: var(--accent-dark);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .calendar-navigation {
+      justify-content: flex-start;
+      margin: 20px 0 16px;
+    }
+
+    .calendar-navigation button {
+      border-color: var(--line);
+      background: var(--panel);
+    }
+
+    .calendar-navigation button:hover,
+    .blocked-period-item button:hover { background: #f0ece3; }
+
+    .calendar-title {
+      margin: 0 auto 0 0;
+      font: 700 0.95rem/1.2 Arial, sans-serif;
+    }
+
+    .calendar-grid {
+      display: grid;
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    .day-calendar { grid-template-columns: 1fr; }
+    .week-calendar { grid-template-columns: repeat(7, minmax(100px, 1fr)); overflow-x: auto; }
+    .month-calendar { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; }
+
+    .calendar-cell {
+      min-height: 130px;
+      padding: 10px;
+      background: var(--panel);
+    }
+
+    .month-calendar .calendar-cell { min-height: 110px; }
+
+    .calendar-cell.today { box-shadow: inset 0 3px 0 var(--accent); }
+    .calendar-cell.outside-month { background: #f1eee7; color: var(--muted); }
+
+    .calendar-day-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      font: 700 0.8rem/1.2 Arial, sans-serif;
+    }
+
+    .calendar-item {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      padding: 7px 8px;
+      border-left: 3px solid var(--accent);
+      border-top: 0;
+      border-right: 0;
+      border-bottom: 0;
+      border-radius: 0;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font: 0.8rem/1.3 Arial, sans-serif;
+      text-align: left;
+    }
+
+    .calendar-item:hover { background: #f0ece3; }
+    .calendar-item.blocked { border-left-color: var(--ink); background: #e8f0ed; }
+    .calendar-item.overdue { border-left-color: var(--accent-dark); color: var(--accent-dark); }
+
+    .blocked-panel { margin-top: 24px; }
+
+    .blocked-form {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1.5fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .blocked-form label { margin-top: 0; }
+    .blocked-form button { margin: 0; }
+
+    .blocked-form-actions {
+      display: flex;
+      gap: 8px;
+      grid-column: span 2;
+    }
+
+    .blocked-form-actions button { flex: 1; }
+
+    .blocked-form-actions [hidden] { display: none; }
+
+    .blocked-period-list {
+      display: grid;
+      gap: 8px;
+      margin: 20px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .blocked-period-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font: 0.85rem/1.3 Arial, sans-serif;
+    }
+
+    .blocked-period-item button { color: var(--accent-dark); }
+
+    @media (max-width: 800px) {
+      .blocked-form { grid-template-columns: repeat(2, 1fr); }
+      .blocked-form button { grid-column: span 2; }
+    }
+
+    .complete-button {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 126px;
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 700px) {
+      main { padding-top: 32px; }
+      .workspace { grid-template-columns: 1fr; }
+      .empty-state { min-height: 180px; }
+
+      .task-item { align-items: stretch; flex-direction: column; }
+      .task-actions { flex-direction: column; }
+      .task-actions button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">School Task Scheduler</p>
+    <h1>Make room for the work that matters.</h1>
+    <p class="intro">Start with the task, then give it a deadline. Your planning space will grow from here.</p>
+
+    <section class="workspace" aria-label="Task planning workspace">
+      <form class="panel" id="task-form" aria-labelledby="task-form-title">
+        <h2 id="task-form-title">Add a task</h2>
+        <label for="task-name">Task name</label>
+        <input id="task-name" name="task-name" type="text" placeholder="Read chapter 4" required>
+
+        <label for="task-due">Due date</label>
+        <input id="task-due" name="task-due" type="date" required>
+
+        <label for="task-duration">Estimated duration <span aria-hidden="true">(optional)</span></label>
+        <input id="task-duration" name="task-duration" type="number" min="1" step="1" placeholder="45" inputmode="numeric">
+
+        <label for="task-course">Course <span aria-hidden="true">(optional)</span></label>
+        <input id="task-course" name="task-course" type="text" placeholder="Biology">
+
+        <label for="task-priority">Priority</label>
+        <select id="task-priority" name="task-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        <label for="task-notes">Notes <span aria-hidden="true">(optional)</span></label>
+        <textarea id="task-notes" name="task-notes" placeholder="Anything you want to remember"></textarea>
+
+        <button id="submit-task" type="submit">Add task</button>
+        <button class="secondary-button cancel-button" id="cancel-edit" type="button" hidden>Cancel edit</button>
+        <button class="secondary-button cancel-button" id="delete-task" type="button" hidden>Delete task</button>
+      </form>
+
+      <section class="panel" aria-labelledby="task-list-title">
+        <h2 id="task-list-title">Your tasks</h2>
+        <div class="empty-state" id="empty-state">
+          <p>No tasks yet. Add your first task to begin planning.</p>
+        </div>
+        <ul class="task-list" id="task-list" aria-live="polite"></ul>
+      </section>
+    </section>
+
+    <section class="panel calendar-panel" aria-labelledby="calendar-title">
+      <div class="calendar-header">
+        <h2 id="calendar-title">Calendar</h2>
+        <div class="view-controls" aria-label="Calendar view">
+          <button class="view-button" data-view="day" type="button" aria-pressed="true">Day</button>
+          <button class="view-button" data-view="week" type="button" aria-pressed="false">Week</button>
+          <button class="view-button" data-view="month" type="button" aria-pressed="false">Month</button>
+        </div>
+      </div>
+      <div class="calendar-navigation">
+        <button id="previous-period" type="button" aria-label="Previous period">Previous</button>
+        <button id="today-period" type="button">Today</button>
+        <button id="next-period" type="button" aria-label="Next period">Next</button>
+        <span class="calendar-title" id="calendar-period-title"></span>
+      </div>
+      <div class="calendar-grid day-calendar" id="calendar-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="panel blocked-panel" aria-labelledby="blocked-title">
+      <h2 id="blocked-title">Blocked time</h2>
+      <form class="blocked-form" id="blocked-form">
+        <div>
+          <label for="blocked-date">Date</label>
+          <input id="blocked-date" name="blocked-date" type="date" required>
+        </div>
+        <div>
+          <label for="blocked-start">Starts</label>
+          <input id="blocked-start" name="blocked-start" type="time" required>
+        </div>
+        <div>
+          <label for="blocked-end">Ends</label>
+          <input id="blocked-end" name="blocked-end" type="time" required>
+        </div>
+        <div>
+          <label for="blocked-label">Label</label>
+          <input id="blocked-label" name="blocked-label" type="text" placeholder="Practice" required>
+        </div>
+        <div class="blocked-form-actions">
+          <button id="submit-blocked" type="submit">Add blocked time</button>
+          <button class="secondary-button" id="cancel-blocked" type="button" hidden>Cancel</button>
+          <button class="secondary-button" id="delete-blocked" type="button" hidden>Delete</button>
+        </div>
+      </form>
+      <ul class="blocked-period-list" id="blocked-period-list" aria-live="polite"></ul>
+    </section>
+  </main>
+
+  <script>
+    const taskForm = document.querySelector('#task-form');
+    const taskList = document.querySelector('#task-list');
+    const emptyState = document.querySelector('#empty-state');
+    const storageKey = 'school-task-scheduler-tasks';
+    const savedTasks = localStorage.getItem(storageKey);
+    const tasks = savedTasks ? JSON.parse(savedTasks) : [];
+    const blockedStorageKey = 'school-task-scheduler-blocked-periods';
+    const savedBlockedPeriods = localStorage.getItem(blockedStorageKey);
+    const blockedPeriods = savedBlockedPeriods ? JSON.parse(savedBlockedPeriods) : [];
+    const selectedDate = new Date();
+    let currentView = localStorage.getItem('school-task-scheduler-view') || 'day';
+    let editingTaskId = null;
+    let editingBlockedId = null;
+
+    function saveTasks() {
+      localStorage.setItem(storageKey, JSON.stringify(tasks));
+    }
+
+    function todayKey() {
+      const today = new Date();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${today.getFullYear()}-${month}-${day}`;
+    }
+
+    function dateToKey(date) {
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function dateFromKey(dateKey) {
+      return new Date(`${dateKey}T00:00:00`);
+    }
+
+    function shiftDate(date, days) {
+      const shiftedDate = new Date(date);
+      shiftedDate.setDate(shiftedDate.getDate() + days);
+      return shiftedDate;
+    }
+
+    function startOfWeek(date) {
+      const weekStart = new Date(date);
+      const day = weekStart.getDay();
+      weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
+      return weekStart;
+    }
+
+    function saveBlockedPeriods() {
+      localStorage.setItem(blockedStorageKey, JSON.stringify(blockedPeriods));
+    }
+
+    function beginEditTask(task) {
+      editingTaskId = task.id;
+      taskForm.elements['task-name'].value = task.name;
+      taskForm.elements['task-due'].value = task.dueDate;
+      taskForm.elements['task-duration'].value = task.duration;
+      taskForm.elements['task-course'].value = task.course;
+      taskForm.elements['task-priority'].value = task.priority;
+      taskForm.elements['task-notes'].value = task.notes;
+      document.querySelector('#task-form-title').textContent = 'Edit task';
+      document.querySelector('#submit-task').textContent = 'Save changes';
+      document.querySelector('#cancel-edit').hidden = false;
+      document.querySelector('#delete-task').hidden = false;
+      document.querySelector('#task-name').focus();
+      taskForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function deleteTask(taskId) {
+      const taskIndex = tasks.findIndex((task) => task.id === taskId);
+      if (taskIndex === -1) return;
+      tasks.splice(taskIndex, 1);
+      if (editingTaskId === taskId) resetForm();
+      saveTasks();
+      renderTasks();
+    }
+
+    function beginEditBlocked(period) {
+      editingBlockedId = period.id;
+      const blockedForm = document.querySelector('#blocked-form');
+      blockedForm.elements['blocked-date'].value = period.date;
+      blockedForm.elements['blocked-start'].value = period.start;
+      blockedForm.elements['blocked-end'].value = period.end;
+      blockedForm.elements['blocked-label'].value = period.label;
+      document.querySelector('#submit-blocked').textContent = 'Save changes';
+      document.querySelector('#cancel-blocked').hidden = false;
+      document.querySelector('#delete-blocked').hidden = false;
+      document.querySelector('#blocked-label').focus();
+      blockedForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function resetBlockedForm() {
+      document.querySelector('#blocked-form').reset();
+      editingBlockedId = null;
+      document.querySelector('#submit-blocked').textContent = 'Add blocked time';
+      document.querySelector('#cancel-blocked').hidden = true;
+      document.querySelector('#delete-blocked').hidden = true;
+      document.querySelector('#blocked-end').setCustomValidity('');
+    }
+
+    function deleteBlockedPeriod(periodId) {
+      const periodIndex = blockedPeriods.findIndex((period) => period.id === periodId);
+      if (periodIndex === -1) return;
+      blockedPeriods.splice(periodIndex, 1);
+      saveBlockedPeriods();
+      resetBlockedForm();
+      renderBlockedPeriods();
+      renderCalendar();
+    }
+
+    function timeToMinutes(timeValue) {
+      const match = /^(\d{2}):(\d{2})$/.exec(timeValue);
+      if (!match) return NaN;
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      if (hours > 23 || minutes > 59) return NaN;
+      return hours * 60 + minutes;
+    }
+
+    function addCalendarItems(cell, date) {
+      const dateKey = dateToKey(date);
+      tasks.filter((task) => task.dueDate === dateKey).forEach((task) => {
+        const taskItem = document.createElement('button');
+        taskItem.className = `calendar-item${isOverdue(task) ? ' overdue' : ''}`;
+        taskItem.textContent = task.name;
+        taskItem.type = 'button';
+        taskItem.setAttribute('aria-label', `Edit task ${task.name}`);
+        taskItem.addEventListener('click', (event) => {
+          event.stopPropagation();
+          beginEditTask(task);
+        });
+        cell.append(taskItem);
+      });
+
+      blockedPeriods.filter((period) => period.date === dateKey).forEach((period) => {
+        const blockedItem = document.createElement('button');
+        blockedItem.className = 'calendar-item blocked';
+        blockedItem.textContent = `${period.start}-${period.end}: ${period.label}`;
+        blockedItem.type = 'button';
+        blockedItem.setAttribute('aria-label', `Edit blocked time ${period.label}`);
+        blockedItem.addEventListener('click', (event) => {
+          event.stopPropagation();
+          beginEditBlocked(period);
+        });
+        cell.append(blockedItem);
+      });
+    }
+
+    function createCalendarCell(date, heading) {
+      const cell = document.createElement('div');
+      const dateKey = dateToKey(date);
+      cell.className = `calendar-cell${dateKey === todayKey() ? ' today' : ''}`;
+      cell.title = 'Click to add blocked time on this date';
+      cell.addEventListener('click', () => {
+        const blockedForm = document.querySelector('#blocked-form');
+        resetBlockedForm();
+        blockedForm.elements['blocked-date'].value = dateKey;
+        document.querySelector('#blocked-label').focus();
+      });
+
+      if (currentView === 'month' && date.getMonth() !== selectedDate.getMonth()) {
+        cell.classList.add('outside-month');
+      }
+
+      const dayHeading = document.createElement('div');
+      dayHeading.className = 'calendar-day-heading';
+      dayHeading.textContent = heading;
+      cell.append(dayHeading);
+      addCalendarItems(cell, date);
+      return cell;
+    }
+
+    function renderCalendar() {
+      document.querySelectorAll('.view-button').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.view === currentView));
+      });
+
+      const calendarGrid = document.querySelector('#calendar-grid');
+      const periodTitle = document.querySelector('#calendar-period-title');
+      calendarGrid.replaceChildren();
+      calendarGrid.className = `calendar-grid ${currentView}-calendar`;
+
+      if (currentView === 'day') {
+        periodTitle.textContent = selectedDate.toLocaleDateString(undefined, { dateStyle: 'full' });
+        calendarGrid.append(createCalendarCell(selectedDate, 'Day'));
+      } else if (currentView === 'week') {
+        const weekStart = startOfWeek(selectedDate);
+        const weekEnd = shiftDate(weekStart, 6);
+        periodTitle.textContent = `${weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString(undefined, { dateStyle: 'medium' })}`;
+        for (let day = 0; day < 7; day += 1) {
+          const date = shiftDate(weekStart, day);
+          calendarGrid.append(createCalendarCell(date, date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })));
+        }
+      } else {
+        periodTitle.textContent = selectedDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const gridStart = startOfWeek(monthStart);
+        for (let day = 0; day < 42; day += 1) {
+          const date = shiftDate(gridStart, day);
+          calendarGrid.append(createCalendarCell(date, date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })));
+        }
+      }
+    }
+
+    function renderBlockedPeriods() {
+      const blockedList = document.querySelector('#blocked-period-list');
+      blockedList.replaceChildren();
+      blockedPeriods
+        .slice()
+        .sort((first, second) => `${first.date}${first.start}`.localeCompare(`${second.date}${second.start}`))
+        .forEach((period) => {
+          const item = document.createElement('li');
+          item.className = 'blocked-period-item';
+          const description = document.createElement('span');
+          description.textContent = `${formatDueDate(period.date)} | ${period.start}-${period.end} | ${period.label}`;
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.textContent = 'Remove';
+          deleteButton.addEventListener('click', () => {
+            deleteBlockedPeriod(period.id);
+          });
+          const editButton = document.createElement('button');
+          editButton.type = 'button';
+          editButton.textContent = 'Edit';
+          editButton.addEventListener('click', () => beginEditBlocked(period));
+          item.append(description, editButton, deleteButton);
+          blockedList.append(item);
+        });
+    }
+
+    function isOverdue(task) {
+      return !task.completed && task.dueDate < todayKey();
+    }
+
+    function resetForm() {
+      taskForm.reset();
+      editingTaskId = null;
+      document.querySelector('#task-form-title').textContent = 'Add a task';
+      document.querySelector('#submit-task').textContent = 'Add task';
+      document.querySelector('#cancel-edit').hidden = true;
+      document.querySelector('#delete-task').hidden = true;
+    }
+
+    function formatDueDate(dateValue) {
+      return new Date(`${dateValue}T00:00:00`).toLocaleDateString(undefined, {
+        dateStyle: 'medium'
+      });
+    }
+
+    function renderTasks() {
+      taskList.replaceChildren();
+      emptyState.hidden = tasks.length > 0;
+
+      tasks.forEach((task) => {
+        const item = document.createElement('li');
+        item.className = `task-item${task.completed ? ' completed' : ''}${isOverdue(task) ? ' overdue' : ''}`;
+
+        const details = document.createElement('div');
+        details.className = 'task-details';
+
+        const name = document.createElement('strong');
+        name.textContent = task.name;
+
+        const dueDate = document.createElement('span');
+        dueDate.textContent = `Due ${formatDueDate(task.dueDate)}`;
+
+        if (isOverdue(task)) {
+          const overdueLabel = document.createElement('span');
+          overdueLabel.className = 'overdue-label';
+          overdueLabel.textContent = 'Overdue';
+          details.append(overdueLabel);
+        }
+
+        const metadata = document.createElement('span');
+        const metadataParts = [
+          task.course,
+          task.duration ? `${task.duration} min` : '',
+          `${task.priority} priority`
+        ].filter(Boolean);
+        metadata.textContent = metadataParts.join(' | ');
+
+        details.append(name, dueDate, metadata);
+
+        if (task.notes) {
+          const notes = document.createElement('span');
+          notes.textContent = task.notes;
+          details.append(notes);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'task-actions';
+
+        const completeButton = document.createElement('button');
+        completeButton.className = 'complete-button';
+        completeButton.type = 'button';
+        completeButton.textContent = task.completed ? 'Completed' : 'Mark complete';
+        completeButton.setAttribute('aria-pressed', String(task.completed));
+        completeButton.addEventListener('click', () => {
+          task.completed = !task.completed;
+          saveTasks();
+          renderTasks();
+        });
+
+        const editButton = document.createElement('button');
+        editButton.className = 'secondary-button';
+        editButton.type = 'button';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', () => beginEditTask(task));
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'secondary-button';
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => deleteTask(task.id));
+
+        actions.append(completeButton, editButton, deleteButton);
+        item.append(details, actions);
+        taskList.append(item);
+      });
+
+      renderCalendar();
+    }
+
+    taskForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const formData = new FormData(taskForm);
+
+      const taskDetails = {
+        name: formData.get('task-name'),
+        dueDate: formData.get('task-due'),
+        duration: formData.get('task-duration'),
+        course: formData.get('task-course'),
+        priority: formData.get('task-priority'),
+        notes: formData.get('task-notes')
+      };
+
+      if (editingTaskId) {
+        const task = tasks.find((savedTask) => savedTask.id === editingTaskId);
+        Object.assign(task, taskDetails);
+      } else {
+        tasks.push({ id: crypto.randomUUID(), ...taskDetails, completed: false });
+      }
+
+      saveTasks();
+      resetForm();
+      document.querySelector('#task-name').focus();
+      renderTasks();
+    });
+
+    document.querySelector('#cancel-edit').addEventListener('click', () => {
+      resetForm();
+      document.querySelector('#task-name').focus();
+    });
+
+    document.querySelectorAll('.view-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        currentView = button.dataset.view;
+        localStorage.setItem('school-task-scheduler-view', currentView);
+        renderCalendar();
+      });
+    });
+
+    document.querySelector('#previous-period').addEventListener('click', () => {
+      const days = currentView === 'day' ? -1 : currentView === 'week' ? -7 : 0;
+      if (currentView === 'month') selectedDate.setMonth(selectedDate.getMonth() - 1);
+      else selectedDate.setDate(selectedDate.getDate() + days);
+      renderCalendar();
+    });
+
+    document.querySelector('#today-period').addEventListener('click', () => {
+      const today = new Date();
+      selectedDate.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+      renderCalendar();
+    });
+
+    document.querySelector('#next-period').addEventListener('click', () => {
+      const days = currentView === 'day' ? 1 : currentView === 'week' ? 7 : 0;
+      if (currentView === 'month') selectedDate.setMonth(selectedDate.getMonth() + 1);
+      else selectedDate.setDate(selectedDate.getDate() + days);
+      renderCalendar();
+    });
+
+    document.querySelector('#blocked-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const start = formData.get('blocked-start');
+      const end = formData.get('blocked-end');
+      const endInput = form.elements['blocked-end'];
+      const startMinutes = timeToMinutes(start);
+      const endMinutes = timeToMinutes(end);
+
+      if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes) {
+        endInput.setCustomValidity('End time must be after start time.');
+        endInput.reportValidity();
+        return;
+      }
+
+      endInput.setCustomValidity('');
+      const blockedDetails = {
+        date: formData.get('blocked-date'),
+        start,
+        end,
+        label: formData.get('blocked-label')
+      };
+      if (editingBlockedId) {
+        const period = blockedPeriods.find((savedPeriod) => savedPeriod.id === editingBlockedId);
+        Object.assign(period, blockedDetails);
+      } else {
+        blockedPeriods.push({ id: crypto.randomUUID(), ...blockedDetails });
+      }
+      saveBlockedPeriods();
+      resetBlockedForm();
+      renderBlockedPeriods();
+      renderCalendar();
+    });
+
+    document.querySelector('#delete-task').addEventListener('click', () => deleteTask(editingTaskId));
+
+    document.querySelector('#cancel-blocked').addEventListener('click', resetBlockedForm);
+    document.querySelector('#delete-blocked').addEventListener('click', () => deleteBlockedPeriod(editingBlockedId));
+
+    renderTasks();
+    renderBlockedPeriods();
+  </script>
+</body>
+</html>
